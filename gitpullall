@@ -1,0 +1,23 @@
+#!/bin/sh
+#@author Ternence HUANG < huangyxs@hotmail.com >
+#using for pull all sub dir git projects
+
+result="\033[0;33m--------------------PULL RESULT--------------------\033[0m\n"
+
+for dir in `ls -d */`
+do
+	echo '\033[1;32mStart pull '$dir'...\033[0m'
+
+	cd $dir
+	git pull
+	if [ $? -eq 0 ]
+		then
+			result=$result'\033[0;32mGit pull in '${dir}' SUCCESS...\033[0m\n'
+		else
+			result=$result'\033[0;31mGit pull in '${dir}' FAILED!\033[0m\n'
+		fi
+	cd ..
+done
+
+result=$result'\033[0;33m---------------------------------------------------\033[0m'
+echo $result
