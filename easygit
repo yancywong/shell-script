@@ -1,0 +1,191 @@
+#!/bin/sh
+#@author Ternence HUANG < huangyxs@hotmail.com >
+#using for easy clone from gitlab
+
+#better rank them in order of compiling
+gitlab[0]='webull-framework,https://gitlab.ustock.cc:5253/core/webull-framework.git'
+gitlab[1]='webull-trade,https://gitlab.ustock.cc:5253/core/webull-trade.git'
+gitlab[2]='webull-trade-basic,https://gitlab.ustock.cc:5253/core/webull-trade-basic.git'
+gitlab[3]='webull-trade-fix,https://gitlab.ustock.cc:5253/core/webull-trade-fix.git'
+gitlab[4]='webull-trade-user,https://gitlab.ustock.cc:5253/core/webull-trade-user.git'
+gitlab[5]='webull-trade-account,https://gitlab.ustock.cc:5253/core/webull-trade-account.git'
+gitlab[6]='webull-trade-order,https://gitlab.ustock.cc:5253/core/webull-trade-order.git'
+gitlab[7]='webull-trade-admin,https://gitlab.ustock.cc:5253/core/webull-trade-admin.git'
+gitlab[8]='trade-deploy,https://gitlab.ustock.cc:5253/core/trade-deploy.git'
+gitlab[9]='webull-trade-openapi,https://gitlab.ustock.cc:5253/core/webull-trade-openapi.git'
+
+do_clone(){
+	echo "\033[1;32mStart clone from webull gitlab...\033[0m"
+	clone_success=true
+	clone_result="\033[0;33m-------------------CLONE RESULT-------------------\033[0m\n"
+	for cho in ${chos_arr[@]}
+	do  
+		echo '\033[0;33m--------------------------------------------------\033[0m'
+		name=`echo ${gitlab[cho]} | cut -d \, -f 1`
+		add=`echo ${gitlab[cho]} | cut -d \, -f 2`
+		git clone -b ${branch} $add
+		if [ $? -eq 0 ]
+		then
+			clone_result=$clone_result'\033[0;32mClone '${name}' SUCCESS...\033[0m\n'
+		else
+			clone_success=false
+			clone_result=$clone_result'\033[0;31mClone '${name}' FAILED!\033[0m\n'
+		fi
+	done
+	clone_result=$clone_result'\033[0;33m--------------------------------------------------\033[0m'
+	echo $clone_result
+}
+
+do_install(){
+	echo "\033[1;32mStart install from webull gitlab...\033[0m"
+
+	install_success=true
+	install_result="\033[0;33m------------------INSTALL RESULT------------------\033[0m\n"
+	reinstall_prompt='Do you want to re install failed project(s)?\n'
+	for cho in ${chos_arr[@]}
+	do  
+		echo '\033[0;33m--------------------------------------------------\033[0m'
+		name=`echo ${gitlab[cho]} | cut -d \, -f 1`
+		cd $name
+		mvn clean install -Dmaven.test.skip
+		if [ $? -eq 0 ]
+		then
+			install_result=$install_result'\033[0;32mInstall '${name}' SUCCESS...\033[0m\n'
+		else
+			install_success=false
+			install_result=$install_result'\033[0;31mInstall '${name}' FAILED!\033[0m\n'
+			re_chos[${#re_chos[@]}]=$cho
+			reinstall_prompt=$reinstall_prompt'\033[0;33m    '${name}'\033[0m\n'
+		fi
+		cd ..
+	done
+	install_result=$install_result'\033[0;33m--------------------------------------------------\033[0m'
+	reinstall_prompt=$reinstall_prompt'\033[0;33m(yes/no)?\033[0m'
+	echo $clone_result
+	echo
+	echo $install_result
+	if ! $install_success
+	then
+		while :
+		do
+			echo $reinstall_prompt
+			read reinstall
+			if [[ "$reinstall" == "yes" ]]; then
+				reinstall_success=true
+				reinstall_result="\033[0;33m-----------------REINSTALL RESULT-----------------\033[0m\n"
+				for re_cho in ${re_chos[@]}
+				do  
+					echo '\033[0;33m--------------------------------------------------\033[0m'
+					name=`echo ${gitlab[re_cho]} | cut -d \, -f 1`
+					cd $name
+					mvn clean install -Dmaven.test.skip
+					if [ $? -eq 0 ]
+					then
+						reinstall_result=$reinstall_result'\033[0;32mReinstall '${name}' SUCCESS...\033[0m\n'
+					else
+						reinstall_success=false
+						reinstall_result=$reinstall_result'\033[0;31mReinstall '${name}' FAILED!\033[0m\n'
+					fi
+					cd ..
+				done
+				reinstall_result=$reinstall_result'\033[0;33m--------------------------------------------------\033[0m'
+				echo $clone_result
+				echo
+				echo $install_result
+				echo
+				echo $reinstall_result
+				if ! $reinstall_success
+				then
+					echo '\033[0;31mExit with some reinstall failed...\033[0m'
+				fi
+				break
+			elif [[ "$reinstall" == "no" ]]; then
+				echo '\033[0;31mExit with some install failed...\033[0m'
+				break
+			else
+				echo "\033[1;31myes or no!\033[0m"
+			fi
+		done
+	fi
+}
+
+clone(){
+	do_clone $1 $2
+	if ! $clone_success
+	then
+		echo '\033[0;31mExit with some clone failed...\033[0m'
+	fi
+}
+
+install(){
+	do_clone $1 $2
+	if $clone_success
+	then
+		do_install $1 $2
+	else
+		echo '\033[0;31mExit cause failed clone!\033[0m'
+	fi
+}
+
+prepare(){
+	while : 
+	do
+		echo "\033[1;32mSelect programs you need:\033[0m"
+		for ((i=0; i<${#gitlab[@]};i++)); do
+			echo '  '$i' ---> '`echo ${gitlab[i]} | cut -d \, -f 1`
+		done
+		echo "\033[0;32msplit with ',':\033[0m"
+		read chos
+		
+		OLD_IFS="$IFS"
+		IFS=","
+		chos_arr=($chos)
+		IFS="$OLD_IFS"
+		success=false
+
+		while :
+		do
+			echo '\033[0;33mthe project you need?\033[0m'
+			
+			for cho in ${chos_arr[@]}
+			do  
+				echo '  '`echo ${gitlab[cho]} | cut -d \, -f 1`
+			done
+
+			echo '\033[0;33m(yes/no)?\033[0m'
+			read confirm
+
+			if [ $confirm == "yes" ]
+			then
+				success=true
+				break
+			elif [ $confirm == "no" ]
+			then
+				break
+			else
+				echo "\033[1;31myes or no!\033[0m"
+			fi
+		done
+
+		if $success
+		then
+			break
+		fi
+	done
+	echo "\033[1;32mInput branch name:(default uat)\033[0m"
+	read branch
+	if [ "$branch" == "" ]
+	then
+		branch="uat"
+	fi
+	$1 $chos_arr $branch
+}
+
+case $1 in
+	"clone" ) prepare clone
+	;;
+	"install" ) prepare install
+	;;
+	* ) echo "\033[1;31mOnly support 'clone' or 'install'!\033[0m"
+	;;
+esac
