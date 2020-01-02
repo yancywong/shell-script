@@ -1,0 +1,11 @@
+#!/bin/sh
+#open directory using IDEA in terminal
+
+ARG=$@
+if [ "$ARG" == "." ]
+then
+ARG=$(pwd)
+fi
+
+echo "Opening IntelliJ IDEA with args = ${ARG}"
+open -a "IntelliJ IDEA" --args $ARG
