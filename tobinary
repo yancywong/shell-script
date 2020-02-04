@@ -1,1 +1,4 @@
+#!/bin/sh
+#convert decimal to binary
+
 echo "obase=2;$1" | bc
