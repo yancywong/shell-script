@@ -1,0 +1,5 @@
+#!/bin/sh
+#@author Ternence HUANG < huangyxs@hotmail.com >
+#run sql in shell
+
+mysql -uroot -pternence -e "$1"
